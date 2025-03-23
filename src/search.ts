@@ -5,16 +5,28 @@ interface Preferences {
   defaultBang?: string;
 }
 
+const preferences = getPreferenceValues<Preferences>();
+
 export default async function main(props: LaunchProps<{ arguments: Arguments.Search }>) {
   const { query } = props.arguments;
-  const q = query ?? props.fallbackText;
+  let q = query ?? props.fallbackText;
 
-  const preferences = getPreferenceValues<Preferences>();
+  snap: if (q.includes("@")) {
+    const match = q.match(/@(\S+)/i);
+    const snapCandidate = match?.[1]?.toLowerCase();
+    if (!snapCandidate) break snap;
+
+    const selectedBang = bangs.find((b) => b.t === snapCandidate);
+    if (!selectedBang) break snap;
+
+    q = q.replace(/@\S+/, `site:${selectedBang.d}`);
+  }
 
   const LS_DEFAULT_BANG = preferences.defaultBang ?? "g";
   const defaultBang = bangs.find((b) => b.t === LS_DEFAULT_BANG);
 
   const searchUrl = getBangredirectUrl(q, defaultBang);
+
   if (!searchUrl) {
     showToast({ title: "No search query found.", style: Toast.Style.Failure });
     return;
@@ -27,7 +39,8 @@ function getBangredirectUrl(query: string, defaultBang?: Bang) {
   const match = query.match(/!(\S+)/i);
 
   const bangCandidate = match?.[1]?.toLowerCase();
-  const selectedBang = bangs.find((b) => b.t === bangCandidate) ?? defaultBang;
+  const selectedBang = (bangCandidate && bangs.find((b) => b.t === bangCandidate)) || defaultBang;
+  if (!selectedBang) return null;
 
   // Remove the first bang from the query
   const cleanQuery = query.replace(/!\S+\s*/i, "").trim();
