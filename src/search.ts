@@ -19,7 +19,8 @@ export default async function main(props: LaunchProps<{ arguments: Arguments.Sea
     const selectedBang = bangs.find((b) => b.t === snapCandidate);
     if (!selectedBang) break snap;
 
-    q = q.replace(/@\S+/, `site:${selectedBang.d}`);
+    q = q.replace(/@\S+\s*/i, "").trim();
+    q += ` site:${selectedBang.d}`;
   }
 
   const LS_DEFAULT_BANG = preferences.defaultBang ?? "g";
